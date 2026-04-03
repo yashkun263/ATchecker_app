@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'attendance_model.dart';
 import 'widgets/attendance_tile.dart';
-import 'scraper_ffi.dart';
+import 'package:my_go_wrapper/my_go_wrapper.dart';
+import 'updates.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,6 +71,20 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(content: Text('Please enter username and password')),
       );
       return;
+    }
+
+    // Check for updates first
+    try {
+      final updateInfo = await UpdateChecker.checkForUpdate();
+      if (updateInfo != null && mounted) {
+        final shouldUpdate = await _showUpdateDialog(updateInfo);
+        if (shouldUpdate == true) {
+          // If the user clicks update, we don't proceed with fetching attendance
+          return;
+        }
+      }
+    } catch (_) {
+      // Ignore update errors and proceed
     }
 
     setState(() {
@@ -296,6 +311,79 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<bool?> _showUpdateDialog(UpdateInfo updateInfo) async {
+    double downloadProgress = 0;
+    bool isDownloading = false;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Update Available: ${updateInfo.latestVersion}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   const Text('A new version of Atchecker is available. Would you like to update?'),
+                   const SizedBox(height: 12),
+                   const Text('Release Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+                   Text(updateInfo.releaseNotes),
+                   if (isDownloading) ...[
+                      const SizedBox(height: 20),
+                      LinearProgressIndicator(value: downloadProgress),
+                      const SizedBox(height: 8),
+                      Text('${(downloadProgress * 100).toStringAsFixed(1)}%'),
+                   ],
+                ],
+              ),
+            ),
+            actions: [
+              if (!isDownloading) ...[
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Later'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    setState(() {
+                      isDownloading = true;
+                    });
+                    
+                    await UpdateChecker.downloadAndInstallUpdate(
+                      updateInfo.downloadUrl,
+                      (progress) {
+                        setState(() {
+                          downloadProgress = progress;
+                        });
+                      },
+                      (error) {
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Update failed: $error')),
+                          );
+                        }
+                      },
+                    );
+                  },
+                  child: const Text('Update Now'),
+                ),
+              ] else ...[
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('Downloading update...'),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

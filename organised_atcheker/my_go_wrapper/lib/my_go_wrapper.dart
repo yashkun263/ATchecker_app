@@ -31,11 +31,11 @@ class ScraperFFI {
     if (Platform.isAndroid) {
       return DynamicLibrary.open('libscraper.so');
     }
-    // Add other platforms if needed
     if (Platform.isIOS) {
-    // iOS looks inside its own process
-    dylib = DynamicLibrary.executable(); 
-}
+      return DynamicLibrary.executable();
+    }
+    // Add other platforms if needed
+    throw UnsupportedError('Platform not supported');
   }
 
   String fetchAttendance(String username, String password) {
