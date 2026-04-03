@@ -1,0 +1,34 @@
+# Flutter/Dart related
+**/build/
+**.dart_tool/
+**.pub-cache/
+**.pub/
+**.flutter-plugins
+**.flutter-plugins-dependencies
+
+# Android related
+**/android/.gradle/
+**/android/local.properties
+**/android/captures/
+**/android/gradle-wrapper.jar
+**/android/gradlew
+**/android/gradlew.bat
+
+# iOS/macOS related
+**/ios/Flutter/.last_build_id
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code related
+.vscode/
+
+# Project specific
+organised_atcheker/attendance_app/build/
+organised_atcheker/my_go_wrapper/build/
+organised_atcheker/my_go_wrapper/example/build/
