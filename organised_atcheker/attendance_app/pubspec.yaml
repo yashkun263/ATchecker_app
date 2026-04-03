@@ -15,6 +15,12 @@ dependencies:
     
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  package_info_plus: ^5.0.1
+  url_launcher: ^6.2.5
+  path_provider: ^2.1.2
+  open_filex: ^4.5.0
+  dio: ^5.4.1
 
 dev_dependencies:
   flutter_test:

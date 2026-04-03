@@ -1,0 +1,5 @@
+{
+  "version": "1.0.1",
+  "url": "https://github.com/yashkun263/ATchecker_app/releases/download/v1.0.1/app-arm64-v8a-release.apk",
+  "notes": "Version 1.0.1:\n- Fixed FFI build errors in Go wrapper\n- Replaced open_file_plus with more stable open_filex\n- Improved update checker performance\n- Support for split-per-abi APKs"
+}
