@@ -29,7 +29,7 @@ class ScraperFFI {
 
   DynamicLibrary _loadLibrary() {
     if (Platform.isAndroid) {
-      return DynamicLibrary.open('libscraper.so');
+      return DynamicLibrary.open('libmygologic.so');
     }
     if (Platform.isIOS) {
       return DynamicLibrary.executable();

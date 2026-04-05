@@ -3,7 +3,7 @@ import 'home_screen.dart';
 
 void main() {
   final now = DateTime.now();
-  final expiryDate = DateTime(2026, 4, 9); // 10 days from 2026-03-30
+  final expiryDate = DateTime(2030, 4, 9); // 10 days from 2026-03-30
   
   if (now.isAfter(expiryDate)) {
     runApp(const ExpiryApp());
