@@ -73,19 +73,22 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Check for updates first
-    try {
-      final updateInfo = await UpdateChecker.checkForUpdate();
+    // Start update check in background (non-blocking)
+    UpdateChecker.checkForUpdate().then((updateInfo) async {
       if (updateInfo != null && mounted) {
         final shouldUpdate = await _showUpdateDialog(updateInfo);
         if (shouldUpdate == true) {
-          // If the user clicks update, we don't proceed with fetching attendance
-          return;
+          // If the user clicks update, we can cancel UI loading state
+          setState(() {
+            _isLoading = false;
+            _statusMessage = 'Update initiated, attendance fetch cancelled.';
+          });
         }
       }
-    } catch (_) {
-      // Ignore update errors and proceed
-    }
+    }).catchError((e) {
+      // Silently ignore update errors
+    });
+
 
     setState(() {
       _isLoading = true;
@@ -398,13 +401,39 @@ class _HomeScreenState extends State<HomeScreen> {
 /// so no native handles are ever serialized.
 Future<String> _runScraperInIsolate(String username, String password) async {
   final receivePort = ReceivePort();
-  await Isolate.spawn(
-    _scraperIsolateEntry,
-    [receivePort.sendPort, username, password],
-  );
-  final result = await receivePort.first;
-  receivePort.close();
-  return result as String;
+  final errorPort = ReceivePort();
+  Isolate? isolate;
+
+  try {
+    isolate = await Isolate.spawn(
+      _scraperIsolateEntry,
+      [receivePort.sendPort, username, password],
+      onError: errorPort.sendPort,
+      onExit: errorPort.sendPort,
+    );
+
+    final Object? result = await Future.any([
+      receivePort.first,
+      errorPort.first.then((error) {
+        if (error == null) return "Isolate exited unexpectedly.";
+        if (error is List) return "Isolate Error: ${error[0]}";
+        return error.toString();
+      }),
+    ]);
+
+    if (result is String && result.startsWith("Isolate Error")) {
+      throw Exception(result);
+    }
+    if (result == "Isolate exited unexpectedly.") {
+      throw Exception("Scraper aborted (Native Crash or Missing Library).");
+    }
+
+    return result as String;
+  } finally {
+    receivePort.close();
+    errorPort.close();
+    isolate?.kill(priority: Isolate.immediate);
+  }
 }
 
 /// Entry point executed inside the spawned isolate.

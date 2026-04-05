@@ -129,9 +129,24 @@ func FetchAttendance(username string, password string) string {
 	var allPossibleTargets []TargetSubject
 	currentURL := attendanceURL
 	maxSemester := 0
+	visited := make(map[string]bool)
+	pageCount := 0
+	const maxPages = 50
 
 	// FIRST PASS: Discover all subjects and find the MAXIMUM semester
 	for {
+		if visited[currentURL] {
+			fmt.Printf("Loop detected in subject discovery: %s\n", currentURL)
+			break
+		}
+		visited[currentURL] = true
+		pageCount++
+		if pageCount > maxPages {
+			fmt.Printf("Max pages (%d) reached in subject discovery\n", maxPages)
+			break
+		}
+
+		fmt.Printf("Scanning subjects page %d: %s\n", pageCount, currentURL)
 		attReq, _ := http.NewRequest("GET", currentURL, nil)
 		attReq.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 
@@ -243,8 +258,21 @@ func fetchDetailAttendance(client *http.Client, urlStr string, subjectName strin
 	currentURL := urlStr
 	firstPage := true
 	pageNum := 1 // track current page for numbered-pagination detection
+	visited := make(map[string]bool)
+	const maxPages = 50
 
 	for {
+		if visited[currentURL] {
+			fmt.Printf("[%s] Loop detected in detail fetch: %s\n", subjectName, currentURL)
+			break
+		}
+		if pageNum > maxPages {
+			fmt.Printf("[%s] Max pages (%d) reached in detail fetch\n", subjectName, maxPages)
+			break
+		}
+		visited[currentURL] = true
+
+		fmt.Printf("[%s] Fetching records page %d: %s\n", subjectName, pageNum, currentURL)
 		req, _ := http.NewRequest("GET", currentURL, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 		resp, err := client.Do(req)
@@ -270,7 +298,7 @@ func fetchDetailAttendance(client *http.Client, urlStr string, subjectName strin
 			firstPage = false
 		}
 
-		doc.Find(".grid-view table tbody tr").Each(func(i int, s *goquery.Selection) {
+		doc.Find("table tbody tr").Each(func(i int, s *goquery.Selection) {
 			tds := s.Find("td")
 			if tds.Length() >= 4 {
 				index := strings.TrimSpace(tds.Eq(0).Text())
