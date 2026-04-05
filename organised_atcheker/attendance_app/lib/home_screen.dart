@@ -359,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       isDownloading = true;
                     });
                     
-                    await UpdateChecker.downloadAndInstallUpdate(
+                    final success = await UpdateChecker.downloadAndInstallUpdate(
                       updateInfo.downloadUrl,
                       (progress) {
                         setState(() {
@@ -375,13 +375,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                       },
                     );
+
+                    if (success && mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Launching installer... Please follow the system prompts.'),
+                          duration: Duration(seconds: 5),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Update Now'),
                 ),
               ] else ...[
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('Downloading update...'),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: downloadProgress < 1.0 
+                    ? const Text('Downloading update...')
+                    : const Text('Launching installer...'),
                 ),
               ],
             ],

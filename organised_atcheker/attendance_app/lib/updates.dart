@@ -92,7 +92,8 @@ class UpdateChecker {
   }
 
   /// Downloads the APK and triggers the installation.
-  static Future<void> downloadAndInstallUpdate(
+  /// Returns [true] if the installer was successfully launched.
+  static Future<bool> downloadAndInstallUpdate(
     String url, 
     Function(double progress) onProgress,
     Function(String error) onError,
@@ -101,7 +102,7 @@ class UpdateChecker {
       final tempDir = await getExternalStorageDirectory();
       if (tempDir == null) {
         onError("Could not access external storage");
-        return;
+        return false;
       }
       
       final filePath = "${tempDir.path}/update.apk";
@@ -125,9 +126,12 @@ class UpdateChecker {
       final result = await OpenFilex.open(filePath);
       if (result.type != ResultType.done) {
         onError("Failed to open APK: ${result.message}");
+        return false;
       }
+      return true;
     } catch (e) {
       onError("Download failed: $e");
+      return false;
     }
   }
 }
