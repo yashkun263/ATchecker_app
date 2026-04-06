@@ -87,6 +87,37 @@ class AttendanceTile extends StatelessWidget {
                   ),
                 ],
               ),
+              
+              // Status Message (Skips/Takes)
+              if (info.getStatusData() != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      info.getStatusData()!['isYellow'] 
+                          ? Icons.info_outline 
+                          : (info.getStatusData()!['isSkip'] ? Icons.check_circle_outline : Icons.warning_amber_rounded),
+                      size: 16,
+                      color: info.getStatusData()!['isYellow'] 
+                          ? Colors.amber.shade400 
+                          : (info.getStatusData()!['isSkip'] ? Colors.green.shade400 : Colors.red.shade400),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        info.getStatusData()!['message'],
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: info.getStatusData()!['isYellow'] 
+                              ? Colors.amber.shade400 
+                              : (info.getStatusData()!['isSkip'] ? Colors.green.shade400 : Colors.red.shade400),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

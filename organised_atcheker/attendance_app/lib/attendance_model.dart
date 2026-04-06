@@ -25,6 +25,8 @@ class DailyRecord {
 }
 
 class AttendanceInfo {
+  static const double targetPercentage = 75.0;
+
   final String subjectName;
   final String percent;
   final String latestClass;
@@ -71,5 +73,62 @@ class AttendanceInfo {
   String get attendancePercentage {
     final match = RegExp(r'Percentage:\s*(.*)').firstMatch(percent);
     return match?.group(1)?.trim() ?? 'N/A';
+  }
+
+  // --- New Helper Methods ---
+
+  /// Parses the latestClass string (e.g., "2026-03-25 15:00-17:00") into a DateTime.
+  DateTime? getParsedLatestDate() {
+    if (latestClass.isEmpty || latestClass == 'N/A') return null;
+    try {
+      // Split by space to get the date part "2026-03-25"
+      final datePart = latestClass.split(' ')[0];
+      return DateTime.tryParse(datePart);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Calculates how many classes to skip or attend to reach the target percentage.
+  Map<String, dynamic>? getStatusData() {
+    final pStr = presentCount;
+    final tStr = totalClasses;
+    if (pStr == 'N/A' || tStr == 'N/A') return null;
+
+    final int p = int.tryParse(pStr) ?? 0;
+    final int t = int.tryParse(tStr) ?? 0;
+    if (t == 0) return null;
+
+    final double currentPct = (p / t) * 100;
+    final double target = targetPercentage / 100;
+
+    if (currentPct > targetPercentage) {
+      // How many can we skip?
+      final int s = ((p / target) - t).floor();
+      return {
+        'isSkip': true,
+        'isYellow': s == 0,
+        'count': s,
+        'message': s == 0 
+            ? 'Safe for now, but skipping next class will put you below ${targetPercentage.toInt()}%'
+            : 'You can skip next $s classes to reach ${targetPercentage.toInt()}%',
+      };
+    } else if (currentPct == targetPercentage) {
+       return {
+        'isSkip': false,
+        'isYellow': true,
+        'count': 0,
+        'message': 'Exactly at ${targetPercentage.toInt()}% - Don\'t miss the next class',
+      };
+    } else {
+      // How many more to attend?
+      final int a = ((target * t - p) / (1 - target)).ceil();
+      return {
+        'isSkip': false,
+        'isYellow': false,
+        'count': a,
+        'message': 'You need to take next $a classes to reach ${targetPercentage.toInt()}%',
+      };
+    }
   }
 }

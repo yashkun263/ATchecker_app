@@ -67,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final List<dynamic> jsonList = jsonDecode(cachedData);
         setState(() {
           _attendanceData = jsonList.map((e) => AttendanceInfo.fromJson(e)).toList();
+          _sortAttendanceData();
         });
       } catch (e) {
         debugPrint('Error loading cached data: $e');
@@ -166,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _attendanceData = jsonList.map((e) => AttendanceInfo.fromJson(e)).toList();
+          _sortAttendanceData();
         });
       }
       await _saveCredentials(user, pass);
@@ -188,6 +190,19 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  void _sortAttendanceData() {
+    _attendanceData.sort((a, b) {
+      final dateA = a.getParsedLatestDate();
+      final dateB = b.getParsedLatestDate();
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1; // Put nulls at the end
+      if (dateB == null) return -1;
+      // Use dateB.compareTo(dateA) for descending (latest first)
+      // If the user says it was backwards, I'll ensure it's actually dateB vs dateA
+      return dateB.compareTo(dateA);
+    });
   }
 
   @override
@@ -255,10 +270,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_scrollController.hasClients && _scrollController.positions.length == 1) {
                     offset = _scrollController.offset;
                   }
+                  
+                  // Fade out the header as it scrolls up to prevent overlapping the list tiles
+                  double opacity = 1.0 - (offset / 250.0);
+                  if (opacity < 0.0) opacity = 0.0;
+                  if (opacity > 1.0) opacity = 1.0;
+
                   // Parallax effect: moves slower than the scroll
-                  return Transform.translate(
-                    offset: Offset(0, offset * 0.5), 
-                    child: child,
+                  return Opacity(
+                    opacity: opacity,
+                    child: Transform.translate(
+                      offset: Offset(0, offset * 0.5), 
+                      child: child,
+                    ),
                   );
                 },
                 child: GestureDetector(
