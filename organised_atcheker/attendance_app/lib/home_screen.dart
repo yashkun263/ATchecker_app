@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'attendance_model.dart';
 import 'widgets/attendance_tile.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:my_go_wrapper/my_go_wrapper.dart';
 import 'updates.dart';
 
@@ -22,11 +23,37 @@ class _HomeScreenState extends State<HomeScreen> {
   String _statusMessage = "";
   bool _obscurePassword = true;
   List<AttendanceInfo> _attendanceData = [];
+  final ScrollController _scrollController = ScrollController();
+  bool _isDarkMode = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadStoredData();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('is_dark_mode') ?? false;
+    });
+  }
+
+  Future<void> _toggleTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+      prefs.setBool('is_dark_mode', _isDarkMode);
+    });
   }
 
   Future<void> _loadStoredData() async {
@@ -180,140 +207,225 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Atchecker',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
+                color: const Color(0xFF2E7D32), // Green shade corresponding to Colors.green.shade800
+                shadows: [
+                  Shadow(
+                    color: Colors.greenAccent.withValues(alpha: 0.8),
+                    blurRadius: 12,
+                    offset: const Offset(0, 0),
+                  )
+                ],
               ),
             ),
           ],
         ),
-        elevation: 0,
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
+        elevation: 2,
+        backgroundColor: _isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+        foregroundColor: _isDarkMode ? Colors.white : Colors.black,
         centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // UPPER PART
-          Container(
-            padding: const EdgeInsets.all(24.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                )
-              ],
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              )
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: _isDarkMode ? Colors.amber.shade400 : Colors.blueGrey.shade700,
             ),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _fetchAttendance,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: _isLoading
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+            onPressed: _toggleTheme,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Container(
+        color: _isDarkMode ? const Color(0xFF121212) : Colors.grey.shade50,
+        child: CustomScrollView(
+          controller: _scrollController,
+          primary: false,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // PARALLAX UPPER SECTION (Login + Wheel)
+            SliverToBoxAdapter(
+              child: AnimatedBuilder(
+                animation: _scrollController,
+                builder: (context, child) {
+                  double offset = 0;
+                  if (_scrollController.hasClients && _scrollController.positions.length == 1) {
+                    offset = _scrollController.offset;
+                  }
+                  // Parallax effect: moves slower than the scroll
+                  return Transform.translate(
+                    offset: Offset(0, offset * 0.5), 
+                    child: child,
+                  );
+                },
+                child: GestureDetector(
+                  // Absorbing vertical drags so swiping on the wheel/login area doesn't scroll the page
+                  onVerticalDragStart: (_) {},
+                  onVerticalDragUpdate: (_) {},
+                  onVerticalDragEnd: (_) {},
+                  onVerticalDragCancel: () {},
+                  behavior: HitTestBehavior.translucent,
+                  child: Column(
+                    children: [
+                      // Login Box
+                      Container(
+                        padding: const EdgeInsets.all(24.0),
+                        decoration: BoxDecoration(
+                          color: _isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _isDarkMode ? Colors.black26 : Colors.blue.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            )
+                          ],
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(30),
+                            bottomRight: Radius.circular(30),
+                          )
+                        ),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: _usernameController,
+                              style: TextStyle(color: _isDarkMode ? Colors.white : Colors.black87),
+                              decoration: InputDecoration(
+                                labelText: 'Username',
+                                labelStyle: TextStyle(color: _isDarkMode ? Colors.white70 : Colors.grey),
+                                prefixIcon: Icon(Icons.person_outline, color: _isDarkMode ? Colors.blueAccent : Colors.blueAccent),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: _isDarkMode ? Colors.white24 : Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: const BorderSide(color: Colors.blueAccent),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _statusMessage,
-                                style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              style: TextStyle(color: _isDarkMode ? Colors.white : Colors.black87),
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                labelStyle: TextStyle(color: _isDarkMode ? Colors.white70 : Colors.grey),
+                                prefixIcon: Icon(Icons.lock_outline, color: _isDarkMode ? Colors.blueAccent : Colors.blueAccent),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                    color: _isDarkMode ? Colors.white54 : Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: _isDarkMode ? Colors.white24 : Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: const BorderSide(color: Colors.blueAccent),
+                                ),
                               ),
-                            ],
-                          )
-                        : const Text(
-                            'Fetch Attendance',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _fetchAttendance,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: _isLoading
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            _statusMessage,
+                                            style: const TextStyle(fontSize: 14),
+                                          ),
+                                        ],
+                                      )
+                                    : const Text(
+                                        'Fetch Attendance',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Attendance Wheel
+                      if (_attendanceData.isNotEmpty)
+                        AttendanceOverviewWheel(
+                          attendanceData: _attendanceData, 
+                          isDarkMode: _isDarkMode,
+                        ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          
-          // LOWER PART
-          Expanded(
-            child: _attendanceData.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                         Icon(Icons.fact_check_outlined, size: 60, color: Colors.blueGrey.shade200),
-                         const SizedBox(height: 16),
-                         Text(
-                          'No attendance data.\nLogin to fetch.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 16),
-                        )
-                      ],
+
+            // LOWER TILES SECTION
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              sliver: _attendanceData.isEmpty
+                  ? SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                             Icon(Icons.fact_check_outlined, size: 60, color: _isDarkMode ? Colors.white24 : Colors.blueGrey.shade200),
+                             const SizedBox(height: 16),
+                             Text(
+                              'No attendance data.\nLogin to fetch.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: _isDarkMode ? Colors.white54 : Colors.blueGrey.shade400, fontSize: 16),
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          return AttendanceTile(
+                            info: _attendanceData[index],
+                            isDarkMode: _isDarkMode,
+                          );
+                        },
+                        childCount: _attendanceData.length,
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    itemCount: _attendanceData.length,
-                    itemBuilder: (context, index) {
-                      return AttendanceTile(info: _attendanceData[index]);
-                    },
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -367,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         });
                       },
                       (error) {
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Update failed: $error')),
@@ -376,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     );
 
-                    if (success && mounted) {
+                    if (success && context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -460,4 +572,153 @@ void _scraperIsolateEntry(List<dynamic> args) {
   final result = ScraperFFI().fetchAttendance(username, password);
   sendPort.send(result);
   Isolate.exit();
+}
+
+class AttendanceOverviewWheel extends StatefulWidget {
+  final List<AttendanceInfo> attendanceData;
+  final bool isDarkMode;
+
+  const AttendanceOverviewWheel({
+    super.key, 
+    required this.attendanceData,
+    this.isDarkMode = false,
+  });
+
+  @override
+  State<AttendanceOverviewWheel> createState() => _AttendanceOverviewWheelState();
+}
+
+class _AttendanceOverviewWheelState extends State<AttendanceOverviewWheel> {
+  int _touchedIndex = -1;
+
+  Color _getColor(double percentage) {
+    if (percentage >= 75) return Colors.green.shade500;
+    if (percentage >= 60) return Colors.amber.shade400;
+    return Colors.red.shade400;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.attendanceData.isEmpty) return const SizedBox.shrink();
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // The Chart
+        SizedBox(
+          height: 220,
+          child: PieChart(
+            PieChartData(
+              pieTouchData: PieTouchData(
+                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                  setState(() {
+                    if (!event.isInterestedForInteractions ||
+                        pieTouchResponse == null ||
+                        pieTouchResponse.touchedSection == null) {
+                      _touchedIndex = -1;
+                      return;
+                    }
+                    _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                  });
+                },
+              ),
+              borderData: FlBorderData(show: false),
+              sectionsSpace: 2,
+              centerSpaceRadius: 45,
+              sections: List.generate(widget.attendanceData.length, (i) {
+                final isTouched = i == _touchedIndex;
+                final info = widget.attendanceData[i];
+                final radius = isTouched ? 45.0 : 35.0;
+                
+                double val = 0.0;
+                if (info.attendancePercentage != 'N/A') {
+                   val = double.tryParse(info.attendancePercentage.replaceAll('%', '')) ?? 0.0;
+                }
+
+                return PieChartSectionData(
+                  color: _getColor(val),
+                  value: 1,
+                  title: '',
+                  radius: radius,
+                  badgeWidget: isTouched ? _buildTooltip(info) : null,
+                  badgePositionPercentageOffset: 1.5,
+                );
+              }),
+            ),
+          ),
+        ),
+        
+        // Center Logo
+        Container(
+          width: 70,
+          height: 70,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(35), // To keep the image perfectly circular if needed
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 50,
+                height: 50,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTooltip(AttendanceInfo info) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: widget.isDarkMode ? const Color(0xFF2C2C2C) : Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: widget.isDarkMode ? Colors.black45 : Colors.black26,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      constraints: const BoxConstraints(maxWidth: 150),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            info.subjectName,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Attendance: ${info.attendancePercentage}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: widget.isDarkMode ? Colors.white70 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

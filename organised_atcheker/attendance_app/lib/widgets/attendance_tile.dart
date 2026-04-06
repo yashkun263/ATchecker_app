@@ -3,8 +3,9 @@ import '../attendance_model.dart';
 
 class AttendanceTile extends StatelessWidget {
   final AttendanceInfo info;
+  final bool isDarkMode;
 
-  const AttendanceTile({Key? key, required this.info}) : super(key: key);
+  const AttendanceTile({super.key, required this.info, this.isDarkMode = false});
 
   Color _getAttendanceColor(String percentageStr) {
     if (percentageStr == 'N/A') return Colors.grey;
@@ -15,34 +16,47 @@ class AttendanceTile extends StatelessWidget {
     return Colors.red.shade600;
   }
 
+  Color _getShadowColor(String percentageStr) {
+    if (percentageStr == 'N/A') return isDarkMode ? Colors.black45 : Colors.black.withValues(alpha: 0.03);
+    final value = double.tryParse(percentageStr.replaceAll('%', ''));
+    if (value == null) return isDarkMode ? Colors.black45 : Colors.black.withValues(alpha: 0.03);
+    if (value >= 75) return Colors.green.withValues(alpha: 0.4);
+    if (value >= 60) return Colors.amber.withValues(alpha: 0.4);
+    return Colors.red.withValues(alpha: 0.4);
+  }
+
   @override
   Widget build(BuildContext context) {
     final attendColor = _getAttendanceColor(info.attendancePercentage);
+    final shadowColor = _getShadowColor(info.attendancePercentage);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        border: Border.all(color: isDarkMode ? Colors.white10 : Colors.blue.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: shadowColor,
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 0),
           )
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
+        iconColor: isDarkMode ? Colors.white70 : Colors.blueGrey,
+        collapsedIconColor: isDarkMode ? Colors.white70 : Colors.blueGrey,
         shape: const Border(),
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Text(
           info.subjectName,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Colors.black87,
+            color: isDarkMode ? Colors.white : Colors.black87,
           ),
         ),
         subtitle: Padding(
@@ -53,9 +67,9 @@ class AttendanceTile extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _InfoBadge(label: 'Total', value: info.totalClasses, color: Colors.blueGrey),
-                  _InfoBadge(label: 'Present', value: info.presentCount, color: Colors.green),
-                  _InfoBadge(label: 'Absent', value: info.absentCount, color: Colors.red),
+                  _InfoBadge(label: 'Total', value: info.totalClasses, color: Colors.blueGrey, isDarkMode: isDarkMode),
+                  _InfoBadge(label: 'Present', value: info.presentCount, color: Colors.green, isDarkMode: isDarkMode),
+                  _InfoBadge(label: 'Absent', value: info.absentCount, color: Colors.red, isDarkMode: isDarkMode),
                 ],
               ),
               const SizedBox(height: 12),
@@ -78,20 +92,24 @@ class AttendanceTile extends StatelessWidget {
         ),
         children: [
           Container(
-            color: Colors.blueGrey.shade50,
+            color: isDarkMode ? const Color(0xFF252525) : Colors.blueGrey.shade50,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Daily Records',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 if (info.dailyRecords.isEmpty)
                    Text(
                     'No daily records found.',
-                    style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    style: TextStyle(color: isDarkMode ? Colors.white38 : Colors.grey.shade600, fontStyle: FontStyle.italic),
                   ),
                 ...info.dailyRecords.reversed.map((rec) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
@@ -101,8 +119,8 @@ class AttendanceTile extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: rec.status.toLowerCase().contains('present') 
-                              ? Colors.green.shade100 
-                              : Colors.red.shade100,
+                              ? (isDarkMode ? Colors.green.shade900.withValues(alpha: 0.4) : Colors.green.shade100)
+                              : (isDarkMode ? Colors.red.shade900.withValues(alpha: 0.4) : Colors.red.shade100),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -111,8 +129,8 @@ class AttendanceTile extends StatelessWidget {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: rec.status.toLowerCase().contains('present') 
-                                ? Colors.green.shade800 
-                                : Colors.red.shade800,
+                                ? Colors.green.shade400 
+                                : Colors.red.shade400,
                           ),
                         ),
                       ),
@@ -121,19 +139,32 @@ class AttendanceTile extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(rec.date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                            Text(rec.time, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                            Text(
+                              rec.date, 
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600, 
+                                fontSize: 13,
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              rec.time, 
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white54 : Colors.grey.shade700, 
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       if (rec.remarks.isNotEmpty)
                         Tooltip(
                           message: rec.remarks,
-                          child: Icon(Icons.info_outline, size: 16, color: Colors.blueGrey.shade400),
+                          child: Icon(Icons.info_outline, size: 16, color: isDarkMode ? Colors.white38 : Colors.blueGrey.shade400),
                         )
                     ],
                   ),
-                )).toList()
+                ))
               ],
             ),
           )
@@ -147,28 +178,42 @@ class _InfoBadge extends StatelessWidget {
   final String label;
   final String value;
   final MaterialColor color;
+  final bool isDarkMode;
 
-  const _InfoBadge({required this.label, required this.value, required this.color});
+  const _InfoBadge({
+    required this.label, 
+    required this.value, 
+    required this.color,
+    this.isDarkMode = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.shade50,
+        color: isDarkMode ? color.shade900.withValues(alpha: 0.2) : color.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.shade200),
+        border: Border.all(color: isDarkMode ? color.shade800 : color.shade200),
       ),
       child: Column(
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: color.shade700, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 11, 
+              color: isDarkMode ? color.shade300 : color.shade700, 
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: TextStyle(fontSize: 14, color: color.shade900, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 14, 
+              color: isDarkMode ? Colors.white : color.shade900, 
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
