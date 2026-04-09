@@ -60,7 +60,7 @@ func FreeString(s *C.char) {
 
 func extractSemester(text string) int {
 	text = strings.ToLower(text)
-	
+
 	// Simplified matcher for format Semester -X or Sem 1, etc.
 	re := regexp.MustCompile(`(semester|sem)\s*[- ]*\s*(\d+)`)
 	matches := re.FindStringSubmatch(text)
@@ -68,7 +68,7 @@ func extractSemester(text string) int {
 		val, _ := strconv.Atoi(matches[2])
 		return val
 	}
-	
+
 	return 0
 }
 
@@ -164,24 +164,26 @@ func FetchAttendance(username string, password string) string {
 		attDoc.Find("table tbody tr, table tr").Each(func(i int, s *goquery.Selection) {
 			text := strings.ToLower(s.Text())
 			sem := extractSemester(text)
-			
+
 			if sem > 0 {
 				if sem > maxSemester {
 					maxSemester = sem
 				}
-				
+
 				var rawName string
 				tds := s.Find("td")
 				if tds.Length() >= 3 {
 					rawName = strings.TrimSpace(tds.Eq(2).Text())
 				}
-				
+
 				var link string
 				s.Find("a, button").EachWithBreak(func(j int, a *goquery.Selection) bool {
 					titleAttr, _ := a.Attr("title")
 					if strings.Contains(strings.ToLower(a.Text()), "view") || strings.Contains(strings.ToLower(titleAttr), "view") {
 						href, exists := a.Attr("href")
-						if exists { link = href }
+						if exists {
+							link = href
+						}
 						return false
 					}
 					return true
@@ -276,10 +278,14 @@ func fetchDetailAttendance(client *http.Client, urlStr string, subjectName strin
 		req, _ := http.NewRequest("GET", currentURL, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 		resp, err := client.Do(req)
-		if err != nil { break }
+		if err != nil {
+			break
+		}
 		doc, err := goquery.NewDocumentFromReader(resp.Body)
 		resp.Body.Close()
-		if err != nil { break }
+		if err != nil {
+			break
+		}
 
 		if firstPage {
 			var percent string
@@ -287,14 +293,20 @@ func fetchDetailAttendance(client *http.Client, urlStr string, subjectName strin
 				headerText := strings.ToLower(strings.TrimSpace(s.Text()))
 				if headerText == "present percentage" || headerText == "present percent" {
 					nextTd := s.Next()
-					if nextTd.Length() > 0 { percent += "Percentage: " + strings.TrimSpace(nextTd.Text()) + " " }
+					if nextTd.Length() > 0 {
+						percent += "Percentage: " + strings.TrimSpace(nextTd.Text()) + " "
+					}
 				} else if headerText == "attendance summary" {
 					nextTd := s.Next()
-					if nextTd.Length() > 0 { percent += "[" + strings.TrimSpace(nextTd.Text()) + "] " }
+					if nextTd.Length() > 0 {
+						percent += "[" + strings.TrimSpace(nextTd.Text()) + "] "
+					}
 				}
 			})
 			info.Percent = strings.TrimSpace(percent)
-			if info.Percent == "" { info.Percent = "No percentage found." }
+			if info.Percent == "" {
+				info.Percent = "No percentage found."
+			}
 			firstPage = false
 		}
 
@@ -309,7 +321,9 @@ func fetchDetailAttendance(client *http.Client, urlStr string, subjectName strin
 						Time:   strings.TrimSpace(tds.Eq(2).Text()),
 						Status: strings.TrimSpace(tds.Eq(3).Text()),
 					}
-					if tds.Length() >= 5 { rec.Remarks = strings.TrimSpace(tds.Eq(4).Text()) }
+					if tds.Length() >= 5 {
+						rec.Remarks = strings.TrimSpace(tds.Eq(4).Text())
+					}
 					info.DailyRecords = append(info.DailyRecords, rec)
 				}
 			}

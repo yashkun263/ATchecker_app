@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,7 @@ import 'widgets/attendance_tile.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:my_go_wrapper/my_go_wrapper.dart';
 import 'updates.dart';
+import 'package:path_provider/path_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,22 +58,36 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<File> _getCacheFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}/attendance_cache.json');
+  }
+
   Future<void> _loadStoredData() async {
     final prefs = await SharedPreferences.getInstance();
     final user = prefs.getString('saved_username');
     final pass = prefs.getString('saved_password');
-    final cachedData = prefs.getString('cached_attendance');
 
-    if (cachedData != null && cachedData.isNotEmpty) {
-      try {
-        final List<dynamic> jsonList = jsonDecode(cachedData);
-        setState(() {
-          _attendanceData = jsonList.map((e) => AttendanceInfo.fromJson(e)).toList();
-          _sortAttendanceData();
-        });
-      } catch (e) {
-        debugPrint('Error loading cached data: $e');
+    // Clean up old bloated SharedPreferences cache
+    if (prefs.containsKey('cached_attendance')) {
+      await prefs.remove('cached_attendance');
+      debugPrint('Removed old bloated SharedPreferences cache.');
+    }
+
+    try {
+      final file = await _getCacheFile();
+      if (await file.exists()) {
+        final cachedData = await file.readAsString();
+        if (cachedData.isNotEmpty) {
+          final List<dynamic> jsonList = jsonDecode(cachedData);
+          setState(() {
+            _attendanceData = jsonList.map((e) => AttendanceInfo.fromJson(e)).toList();
+            _sortAttendanceData();
+          });
+        }
       }
+    } catch (e) {
+      debugPrint('Error loading cached data from file: $e');
     }
 
     if (user != null && pass != null) {
@@ -172,8 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       await _saveCredentials(user, pass);
       
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cached_attendance', jsonString);
+      final file = await _getCacheFile();
+      await file.writeAsString(jsonString);
       
     } catch (e) {
       statusUpdateTimer.cancel();
