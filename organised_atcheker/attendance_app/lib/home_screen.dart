@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    UpdateChecker.cleanupOldUpdates();
     _loadStoredData();
     _loadThemeMode();
   }

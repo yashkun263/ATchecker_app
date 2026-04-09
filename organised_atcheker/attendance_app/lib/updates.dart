@@ -134,4 +134,21 @@ class UpdateChecker {
       return false;
     }
   }
+
+  /// Cleans up any previously downloaded update APK to free up storage space.
+  static Future<void> cleanupOldUpdates() async {
+    try {
+      final tempDir = await getExternalStorageDirectory();
+      if (tempDir != null) {
+        final filePath = "${tempDir.path}/update.apk";
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint('Cleaned up old update.apk to free space.');
+        }
+      }
+    } catch (e) {
+      debugPrint('Cleanup failed: $e');
+    }
+  }
 }
