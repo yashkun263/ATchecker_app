@@ -257,7 +257,17 @@ func FetchAttendance(username string, password string) string {
 func fetchDetailAttendance(client *http.Client, urlStr string, subjectName string) AttendanceInfo {
 	var info AttendanceInfo
 	info.SubjectName = subjectName
-	currentURL := urlStr
+
+	u, err := url.Parse(urlStr)
+	var currentURL string
+	if err == nil {
+		q := u.Query()
+		q.Set("per-page", "500")
+		u.RawQuery = q.Encode()
+		currentURL = u.String()
+	} else {
+		currentURL = urlStr
+	}
 	firstPage := true
 	pageNum := 1 // track current page for numbered-pagination detection
 	visited := make(map[string]bool)
